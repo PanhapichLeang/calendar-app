@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
+
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -710,28 +712,48 @@ const dbRef = db.ref('calendar');
 
 let firebaseReady = false;
 
+// Flag to avoid re-rendering from our own writes
+let savingInProgress = false;
+
 function saveState() {
-  const toSave = {
-    members: state.members,
-    nextId: state.nextId,
-  };
-  dbRef.set(toSave);
+  // Convert members for Firebase: ensure availability arrays are preserved
+  const membersToSave = state.members.map(m => {
+    const avail = {};
+    for (const [wk, slots] of Object.entries(m.availability || {})) {
+      avail[wk] = slots.length > 0 ? slots : [];
+    }
+    return { id: m.id, name: m.name, colorIdx: m.colorIdx, availability: avail };
+  });
+  savingInProgress = true;
+  dbRef.set({ members: membersToSave, nextId: state.nextId }).then(() => {
+    savingInProgress = false;
+  }).catch(() => { savingInProgress = false; });
 }
 
 // Listen for real-time changes from Firebase
 dbRef.on('value', (snapshot) => {
+  // Skip re-render if this was triggered by our own save
+  if (savingInProgress) return;
+
   const data = snapshot.val();
   if (data) {
-    state.members = data.members || state.members;
+    // Restore members, ensuring availability is always a proper object with arrays
+    state.members = (data.members || []).map(m => {
+      const avail = {};
+      if (m.availability) {
+        for (const [wk, slots] of Object.entries(m.availability)) {
+          avail[wk] = Array.isArray(slots) ? slots : Object.values(slots || {});
+        }
+      }
+      return { id: m.id, name: m.name, colorIdx: m.colorIdx, availability: avail };
+    });
     state.nextId = data.nextId || state.nextId;
-    // keep activeMemberId valid
     if (!state.members.find(m => m.id === state.activeMemberId)) {
       state.activeMemberId = state.members[0]?.id || 1;
     }
     firebaseReady = true;
     render();
   } else if (!firebaseReady) {
-    // first time — seed demo data and push to Firebase
     seedDemoData();
     saveState();
     firebaseReady = true;
@@ -901,7 +923,7 @@ function renderCalendarBody() {
       cell.addEventListener('mousedown', (e) => {
         e.preventDefault();
         state.selecting = { day: d, startHour: h, endHour: h + 1 };
-        render();
+        highlightSelection();
       });
       cell.addEventListener('mouseenter', () => {
         if (state.selecting && state.selecting.day === d) {
