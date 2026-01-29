@@ -667,6 +667,8 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
 // ─── State ────────────────────────────────────────────────────
 const MEMBER_COLORS = [
@@ -691,31 +693,51 @@ let state = {
   selecting: null,
 };
 
-// ─── Persistence ──────────────────────────────────────────────
-const STORAGE_KEY = 'gather_calendar_state';
+// ─── Firebase ─────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyASZIwQECfDmD3sQSRVaS8rjbsZ__leBAI",
+  authDomain: "calendar-app-81e87.firebaseapp.com",
+  databaseURL: "https://calendar-app-81e87-default-rtdb.firebaseio.com",
+  projectId: "calendar-app-81e87",
+  storageBucket: "calendar-app-81e87.firebasestorage.app",
+  messagingSenderId: "54044055301",
+  appId: "1:54044055301:web:00cf9fbfd5dc520f2c496c",
+  measurementId: "G-RWDWWLKVKN"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const dbRef = db.ref('calendar');
+
+let firebaseReady = false;
 
 function saveState() {
   const toSave = {
     members: state.members,
-    activeMemberId: state.activeMemberId,
     nextId: state.nextId,
   };
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)); } catch(e) {}
+  dbRef.set(toSave);
 }
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const saved = JSON.parse(raw);
-      state.members = saved.members || state.members;
-      state.activeMemberId = saved.activeMemberId || state.members[0]?.id || 1;
-      state.nextId = saved.nextId || 4;
-      return true;
+// Listen for real-time changes from Firebase
+dbRef.on('value', (snapshot) => {
+  const data = snapshot.val();
+  if (data) {
+    state.members = data.members || state.members;
+    state.nextId = data.nextId || state.nextId;
+    // keep activeMemberId valid
+    if (!state.members.find(m => m.id === state.activeMemberId)) {
+      state.activeMemberId = state.members[0]?.id || 1;
     }
-  } catch(e) {}
-  return false;
-}
+    firebaseReady = true;
+    render();
+  } else if (!firebaseReady) {
+    // first time — seed demo data and push to Firebase
+    seedDemoData();
+    saveState();
+    firebaseReady = true;
+    render();
+  }
+});
 
 // Seed demo data (only if nothing saved)
 function seedDemoData() {
@@ -1200,10 +1222,8 @@ function esc(s) {
 }
 
 // ─── Init ─────────────────────────────────────────────────────
-if (!loadState()) {
-  seedDemoData();
-  saveState();
-}
+// Firebase listener handles loading and rendering.
+// Render an initial empty state while waiting for Firebase.
 render();
 
 // Scroll to 8am on load
