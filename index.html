@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gather — Group Availability</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #F7F3ED;
+    --warm-white: #FDFBF7;
+    --sand: #E8E0D4;
+    --clay: #C4B5A2;
+    --bark: #8B7D6B;
+    --espresso: #4A3F35;
+    --ink: #2C2520;
+    --sage: #8FA68E;
+    --sage-light: #C5D4C0;
+    --sage-bg: #E8EFE5;
+    --terracotta: #C07A5A;
+    --terracotta-light: #E8C4B0;
+    --terracotta-bg: #F5E6DB;
+    --sky: #7A9BB5;
+    --sky-light: #B5CCD9;
+    --sky-bg: #DDE9F0;
+    --lavender: #9B8AB5;
+    --lavender-light: #C9BDD9;
+    --lavender-bg: #E8E0F0;
+    --mutual-green: #5E8B5A;
+    --mutual-bg: #D4E8C8;
+    --mutual-border: #8BBF7A;
+    --radius: 8px;
+    --radius-lg: 14px;
+    --shadow-sm: 0 1px 3px rgba(74, 63, 53, 0.06);
+    --shadow-md: 0 4px 12px rgba(74, 63, 53, 0.08);
+    --shadow-lg: 0 8px 30px rgba(74, 63, 53, 0.1);
+  }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Subtle paper texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 24px 28px 60px; }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--sand);
+  }
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .logo h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    color: var(--espresso);
+    font-weight: 400;
+    letter-spacing: -0.5px;
+  }
+  .logo span {
+    font-size: 13px;
+    color: var(--bark);
+    font-weight: 500;
+  }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+
+  /* Buttons */
+  .btn {
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    border-radius: var(--radius);
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary {
+    background: var(--espresso);
+    color: var(--cream);
+  }
+  .btn-primary:hover { background: var(--ink); }
+  .btn-secondary {
+    background: var(--warm-white);
+    color: var(--espresso);
+    border: 1px solid var(--sand);
+  }
+  .btn-secondary:hover { background: var(--sand); border-color: var(--clay); }
+  .btn-ghost {
+    background: none;
+    color: var(--bark);
+    padding: 6px 10px;
+  }
+  .btn-ghost:hover { color: var(--espresso); background: rgba(139,125,107,0.08); }
+  .btn-icon {
+    width: 34px; height: 34px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: var(--radius);
+    background: var(--warm-white);
+    border: 1px solid var(--sand);
+    color: var(--bark);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn-icon:hover { border-color: var(--clay); color: var(--espresso); }
+
+  /* Layout */
+  .layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 24px;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .panel {
+    background: var(--warm-white);
+    border: 1px solid var(--sand);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+  }
+  .panel-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--bark);
+    margin-bottom: 14px;
+  }
+
+  /* Members list */
+  .member-list { display: flex; flex-direction: column; gap: 6px; }
+  .member-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 8px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .member-item:hover { background: rgba(139,125,107,0.06); }
+  .member-item.active { background: rgba(139,125,107,0.1); }
+  .member-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .member-name { font-size: 13.5px; font-weight: 600; color: var(--espresso); flex: 1; }
+  .member-remove {
+    opacity: 0;
+    width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px;
+    font-size: 14px;
+    color: var(--clay);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: none; border: none;
+    font-family: 'Nunito', sans-serif;
+  }
+  .member-item:hover .member-remove { opacity: 1; }
+  .member-remove:hover { color: var(--terracotta); background: var(--terracotta-bg); }
+
+  .add-member-row {
+    display: flex; gap: 6px; margin-top: 8px;
+  }
+  .add-member-row input {
+    flex: 1;
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    padding: 7px 10px;
+    border: 1px solid var(--sand);
+    border-radius: var(--radius);
+    background: var(--cream);
+    color: var(--espresso);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .add-member-row input:focus { border-color: var(--clay); }
+  .add-member-row input::placeholder { color: var(--clay); }
+
+  /* Legend */
+  .legend { display: flex; flex-direction: column; gap: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--espresso); }
+  .legend-swatch {
+    width: 22px; height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* View toggle */
+  .view-toggle {
+    display: flex;
+    background: var(--cream);
+    border-radius: var(--radius);
+    padding: 3px;
+    gap: 2px;
+    border: 1px solid var(--sand);
+  }
+  .view-toggle button {
+    font-family: 'Nunito', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: var(--bark);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .view-toggle button.active {
+    background: var(--warm-white);
+    color: var(--espresso);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Calendar */
+  .calendar-wrapper {
+    background: var(--warm-white);
+    border: 1px solid var(--sand);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+  .calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--sand);
+    background: linear-gradient(to bottom, var(--warm-white), rgba(232,224,212,0.2));
+  }
+  .calendar-nav {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .calendar-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px;
+    color: var(--espresso);
+    min-width: 200px;
+    text-align: center;
+  }
+
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: 60px repeat(7, 1fr);
+  }
+  .cal-day-header {
+    padding: 12px 6px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--bark);
+    border-bottom: 1px solid var(--sand);
+    background: rgba(232,224,212,0.15);
+  }
+  .cal-day-header.today-header {
+    color: var(--espresso);
+  }
+  .cal-day-header .day-num {
+    display: block;
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    margin-top: 2px;
+    color: var(--espresso);
+  }
+  .cal-day-header.today-header .day-num {
+    background: var(--espresso);
+    color: var(--cream);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .cal-time-gutter {
+    border-bottom: 1px solid rgba(232,224,212,0.5);
+    padding: 0 8px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--clay);
+    transform: translateY(-7px);
+    height: 48px;
+  }
+  .cal-time-gutter:first-of-type { border-bottom-color: var(--sand); }
+
+  .cal-cell {
+    height: 48px;
+    border-bottom: 1px solid rgba(232,224,212,0.5);
+    border-left: 1px solid rgba(232,224,212,0.5);
+    position: relative;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .cal-cell:hover { background: rgba(232,224,212,0.2); }
+  .cal-cell.selecting { background: rgba(143,166,142,0.15); }
+
+  /* Availability blocks */
+  .avail-block {
+    position: absolute;
+    left: 2px; right: 2px;
+    border-radius: 4px;
+    z-index: 2;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 6px;
+    pointer-events: none;
+    border-left: 3px solid;
+    opacity: 0.85;
+    overflow: hidden;
+    transition: opacity 0.2s;
+  }
+  .avail-block.mutual {
+    opacity: 1;
+    border-left-width: 3px;
+    border-left-color: var(--mutual-border);
+    background: var(--mutual-bg) !important;
+    z-index: 3;
+  }
+  .avail-block .avail-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .popover {
+    position: absolute;
+    z-index: 50;
+    background: var(--warm-white);
+    border: 1px solid var(--sand);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 150px;
+    animation: popIn 0.15s ease;
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .popover-info {
+    font-size: 12px;
+    color: var(--bark);
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--sand);
+    margin-bottom: 2px;
+  }
+  .popover-btn {
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+  }
+  .popover-btn.delete {
+    background: none;
+    color: var(--terracotta);
+  }
+  .popover-btn.delete:hover {
+    background: var(--terracotta-bg);
+  }
+  .popover-btn.cancel {
+    background: none;
+    color: var(--bark);
+  }
+  .popover-btn.cancel:hover {
+    background: rgba(139,125,107,0.08);
+  }
+  .avail-block.mutual .avail-label {
+    color: var(--mutual-green);
+    font-weight: 700;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(44,37,32,0.3);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--warm-white);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    width: 380px;
+    max-width: 90vw;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(10px);
+    transition: transform 0.25s ease;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    color: var(--espresso);
+    margin-bottom: 16px;
+    font-weight: 400;
+  }
+  .modal label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--bark);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    margin-top: 14px;
+  }
+  .modal label:first-of-type { margin-top: 0; }
+  .modal input, .modal select {
+    width: 100%;
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    padding: 9px 12px;
+    border: 1px solid var(--sand);
+    border-radius: var(--radius);
+    background: var(--cream);
+    color: var(--espresso);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .modal input:focus, .modal select:focus { border-color: var(--clay); }
+  .modal-actions {
+    display: flex; gap: 8px; justify-content: flex-end; margin-top: 22px;
+  }
+
+  /* Mutual summary */
+  .mutual-summary {
+    padding: 14px 16px;
+    background: linear-gradient(135deg, var(--sage-bg), rgba(212, 232, 200, 0.4));
+    border-radius: var(--radius);
+    border: 1px solid var(--sage-light);
+  }
+  .mutual-summary-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--mutual-green);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .mutual-slot {
+    font-size: 13px;
+    color: var(--espresso);
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mutual-slot::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--mutual-green);
+    flex-shrink: 0;
+  }
+  .no-mutual {
+    font-size: 13px;
+    color: var(--bark);
+    font-style: italic;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--espresso);
+    color: var(--cream);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 200;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Animations */
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .sidebar { animation: fadeSlideIn 0.4s ease; }
+  .calendar-wrapper { animation: fadeSlideIn 0.4s ease 0.1s both; }
+
+  /* Scrollable calendar body */
+  .calendar-body {
+    max-height: 576px; /* 12 rows * 48px */
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: 60px repeat(7, 1fr);
+    scrollbar-width: thin;
+    scrollbar-color: var(--clay) transparent;
+  }
+  .calendar-body::-webkit-scrollbar { width: 6px; }
+  .calendar-body::-webkit-scrollbar-thumb {
+    background: var(--clay);
+    border-radius: 3px;
+  }
+
+  /* selection indicator */
+  .selection-hint {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--espresso);
+    color: var(--cream);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+    margin-bottom: 4px;
+  }
+  .selection-hint::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: var(--espresso);
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <h1>Gather</h1>
+      <span>group availability</span>
+    </div>
+    <div class="header-actions">
+      <div class="view-toggle">
+        <button class="active" data-view="individual">My Schedule</button>
+        <button data-view="overlay">Everyone</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="panel">
+        <div class="panel-title">Members</div>
+        <div class="member-list" id="memberList"></div>
+        <div class="add-member-row">
+          <input type="text" id="newMemberInput" placeholder="Add name…" maxlength="20">
+          <button class="btn-icon" id="addMemberBtn" title="Add member">+</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Legend</div>
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <div class="panel" id="mutualPanel">
+        <div class="panel-title">Mutual Availability</div>
+        <div id="mutualSummary">
+          <p class="no-mutual">Add availability to see overlaps</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Calendar -->
+    <main>
+      <div class="calendar-wrapper">
+        <div class="calendar-header">
+          <div class="calendar-nav">
+            <button class="btn-icon" id="prevWeek">‹</button>
+            <span class="calendar-title" id="calendarTitle"></span>
+            <button class="btn-icon" id="nextWeek">›</button>
+          </div>
+          <button class="btn btn-ghost" id="todayBtn">Today</button>
+          <button class="btn btn-secondary" id="clearWeekBtn">Clear My Week</button>
+        </div>
+        <div class="calendar-grid" id="calendarHead"></div>
+        <div class="calendar-body" id="calendarBody"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Modal for editing slots -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3 id="modalTitle">Add Availability</h3>
+    <label>Day</label>
+    <select id="modalDay"></select>
+    <label>Start Time</label>
+    <select id="modalStart"></select>
+    <label>End Time</label>
+    <select id="modalEnd"></select>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="modalCancel">Cancel</button>
+      <button class="btn btn-primary" id="modalSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────
+const MEMBER_COLORS = [
+  { name: 'sage',       bg: '#E8EFE5', border: '#8FA68E', text: '#4A6B48' },
+  { name: 'terracotta', bg: '#F5E6DB', border: '#C07A5A', text: '#8B4F33' },
+  { name: 'sky',        bg: '#DDE9F0', border: '#7A9BB5', text: '#4A6E85' },
+  { name: 'lavender',   bg: '#E8E0F0', border: '#9B8AB5', text: '#654D80' },
+  { name: 'sand',       bg: '#F0E8D8', border: '#B5A080', text: '#7A6840' },
+  { name: 'rose',       bg: '#F5E0E0', border: '#C08A8A', text: '#8B5050' },
+];
+
+let state = {
+  members: [
+    { id: 1, name: 'You', colorIdx: 0, availability: {} },
+    { id: 2, name: 'Maya', colorIdx: 1, availability: {} },
+    { id: 3, name: 'Jordan', colorIdx: 2, availability: {} },
+  ],
+  activeMemberId: 1,
+  currentView: 'individual', // 'individual' | 'overlay'
+  weekOffset: 0,
+  nextId: 4,
+  selecting: null,
+};
+
+// ─── Persistence ──────────────────────────────────────────────
+const STORAGE_KEY = 'gather_calendar_state';
+
+function saveState() {
+  const toSave = {
+    members: state.members,
+    activeMemberId: state.activeMemberId,
+    nextId: state.nextId,
+  };
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)); } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      state.members = saved.members || state.members;
+      state.activeMemberId = saved.activeMemberId || state.members[0]?.id || 1;
+      state.nextId = saved.nextId || 4;
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+// Seed demo data (only if nothing saved)
+function seedDemoData() {
+  const wk = getWeekKey(0);
+  state.members[0].availability[wk] = [
+    { day: 1, start: 9, end: 12 },
+    { day: 2, start: 10, end: 14 },
+    { day: 3, start: 9, end: 11 },
+    { day: 4, start: 13, end: 16 },
+  ];
+  state.members[1].availability[wk] = [
+    { day: 1, start: 10, end: 13 },
+    { day: 2, start: 9, end: 12 },
+    { day: 3, start: 9, end: 12 },
+    { day: 4, start: 14, end: 17 },
+  ];
+  state.members[2].availability[wk] = [
+    { day: 1, start: 11, end: 15 },
+    { day: 3, start: 10, end: 13 },
+    { day: 4, start: 13, end: 15 },
+  ];
+}
+
+// ─── Date Helpers ─────────────────────────────────────────────
+function getWeekStart(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() - d.getDay() + 1 + offset * 7); // Monday
+  d.setHours(0,0,0,0);
+  return d;
+}
+function getWeekKey(offset) {
+  const d = getWeekStart(offset);
+  return d.toISOString().slice(0, 10);
+}
+function formatDateRange(offset) {
+  const start = getWeekStart(offset);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const opts = { month: 'long', day: 'numeric' };
+  const y1 = start.getFullYear();
+  const y2 = end.getFullYear();
+  if (y1 === y2 && start.getMonth() === end.getMonth()) {
+    return `${start.toLocaleDateString('en-US', { month: 'long' })} ${start.getDate()}–${end.getDate()}, ${y1}`;
+  }
+  return `${start.toLocaleDateString('en-US', opts)} – ${end.toLocaleDateString('en-US', opts)}, ${y2}`;
+}
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const HOURS_START = 7;
+const HOURS_END = 20;
+
+function isToday(dayIdx, offset) {
+  const ws = getWeekStart(offset);
+  ws.setDate(ws.getDate() + dayIdx);
+  const today = new Date();
+  return ws.toDateString() === today.toDateString();
+}
+function getDayDate(dayIdx, offset) {
+  const ws = getWeekStart(offset);
+  ws.setDate(ws.getDate() + dayIdx);
+  return ws.getDate();
+}
+
+function formatHour(h) {
+  if (h === 0 || h === 24) return '12 am';
+  if (h === 12) return '12 pm';
+  return h < 12 ? `${h} am` : `${h-12} pm`;
+}
+
+// ─── Rendering ────────────────────────────────────────────────
+function render() {
+  renderMembers();
+  renderLegend();
+  renderCalendarHead();
+  renderCalendarBody();
+  renderMutualSummary();
+  document.getElementById('calendarTitle').textContent = formatDateRange(state.weekOffset);
+
+  // view toggle
+  document.querySelectorAll('.view-toggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === state.currentView);
+  });
+
+  // update clear button label
+  const activeMember = state.members.find(m => m.id === state.activeMemberId);
+  const clearBtn = document.getElementById('clearWeekBtn');
+  if (activeMember) clearBtn.textContent = `Clear ${activeMember.name}'s Week`;
+}
+
+function renderMembers() {
+  const list = document.getElementById('memberList');
+  list.innerHTML = '';
+  state.members.forEach(m => {
+    const col = MEMBER_COLORS[m.colorIdx % MEMBER_COLORS.length];
+    const div = document.createElement('div');
+    div.className = `member-item${m.id === state.activeMemberId ? ' active' : ''}`;
+    div.innerHTML = `
+      <span class="member-dot" style="background:${col.border}"></span>
+      <span class="member-name">${esc(m.name)}</span>
+      ${state.members.length > 1 ? `<button class="member-remove" data-id="${m.id}" title="Remove">×</button>` : ''}
+    `;
+    div.addEventListener('click', (e) => {
+      if (e.target.classList.contains('member-remove')) return;
+      state.activeMemberId = m.id;
+      state.currentView = 'individual';
+      render();
+    });
+    const rmBtn = div.querySelector('.member-remove');
+    if (rmBtn) rmBtn.addEventListener('click', () => removeMember(m.id));
+    list.appendChild(div);
+  });
+}
+
+function renderLegend() {
+  const el = document.getElementById('legend');
+  el.innerHTML = '';
+  state.members.forEach(m => {
+    const col = MEMBER_COLORS[m.colorIdx % MEMBER_COLORS.length];
+    const div = document.createElement('div');
+    div.className = 'legend-item';
+    div.innerHTML = `<span class="legend-swatch" style="background:${col.bg};border:1px solid ${col.border}"></span>${esc(m.name)}`;
+    el.appendChild(div);
+  });
+  // mutual
+  const md = document.createElement('div');
+  md.className = 'legend-item';
+  md.innerHTML = `<span class="legend-swatch" style="background:var(--mutual-bg);border:1px solid var(--mutual-border)"></span>Everyone free`;
+  el.appendChild(md);
+}
+
+function renderCalendarHead() {
+  const head = document.getElementById('calendarHead');
+  head.innerHTML = '<div class="cal-day-header"></div>';
+  for (let d = 0; d < 7; d++) {
+    const today = isToday(d, state.weekOffset);
+    head.innerHTML += `<div class="cal-day-header${today ? ' today-header' : ''}">
+      ${DAY_NAMES[d]}
+      <span class="day-num">${getDayDate(d, state.weekOffset)}</span>
+    </div>`;
+  }
+}
+
+function renderCalendarBody() {
+  const body = document.getElementById('calendarBody');
+  body.innerHTML = '';
+  const wk = getWeekKey(state.weekOffset);
+
+  for (let h = HOURS_START; h < HOURS_END; h++) {
+    // time gutter
+    const gutter = document.createElement('div');
+    gutter.className = 'cal-time-gutter';
+    gutter.textContent = formatHour(h);
+    body.appendChild(gutter);
+
+    for (let d = 0; d < 7; d++) {
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell';
+      cell.dataset.day = d;
+      cell.dataset.hour = h;
+
+      // Mouse events for drag-select
+      cell.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        state.selecting = { day: d, startHour: h, endHour: h + 1 };
+        render();
+      });
+      cell.addEventListener('mouseenter', () => {
+        if (state.selecting && state.selecting.day === d) {
+          state.selecting.endHour = h + 1;
+          highlightSelection();
+        }
+      });
+
+      body.appendChild(cell);
+    }
+  }
+
+  // Draw avail blocks
+  if (state.currentView === 'individual') {
+    const m = state.members.find(m => m.id === state.activeMemberId);
+    if (m) drawMemberAvail(m, body, true);
+  } else {
+    state.members.forEach(m => drawMemberAvail(m, body, false));
+    drawMutualBlocks(body);
+  }
+}
+
+function drawMemberAvail(member, body, showRemove) {
+  const wk = getWeekKey(state.weekOffset);
+  const slots = member.availability[wk] || [];
+  const col = MEMBER_COLORS[member.colorIdx % MEMBER_COLORS.length];
+
+  slots.forEach((slot, idx) => {
+    const topRow = slot.start - HOURS_START;
+    const height = slot.end - slot.start;
+    if (topRow < 0 || topRow + height > HOURS_END - HOURS_START) return;
+
+    // Find the cell for this day and starting hour
+    const cellIndex = topRow * 7 + slot.day;
+    const cells = body.querySelectorAll('.cal-cell');
+    const anchor = cells[cellIndex];
+    if (!anchor) return;
+
+    const block = document.createElement('div');
+    block.className = 'avail-block';
+    block.style.background = col.bg;
+    block.style.borderColor = col.border;
+    block.style.color = col.text;
+    block.style.top = '1px';
+    block.style.height = `${height * 48 - 2}px`;
+    block.innerHTML = `<span class="avail-label">${esc(member.name)} · ${formatHour(slot.start)}–${formatHour(slot.end)}</span>`;
+    block.style.pointerEvents = 'auto';
+    block.style.cursor = 'pointer';
+    block.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+    });
+    block.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openDeletePopover(block, member, wk, idx);
+    });
+
+    anchor.style.position = 'relative';
+    anchor.appendChild(block);
+  });
+}
+
+function drawMutualBlocks(body) {
+  if (state.members.length < 2) return;
+  const wk = getWeekKey(state.weekOffset);
+
+  for (let d = 0; d < 7; d++) {
+    // Build per-hour bitmask: which members are free
+    const hours = new Array(HOURS_END - HOURS_START).fill(0);
+    state.members.forEach((m, mi) => {
+      const slots = m.availability[wk] || [];
+      slots.forEach(s => {
+        if (s.day !== d) return;
+        for (let h = s.start; h < s.end; h++) {
+          const idx = h - HOURS_START;
+          if (idx >= 0 && idx < hours.length) hours[idx] |= (1 << mi);
+        }
+      });
+    });
+
+    const allMask = (1 << state.members.length) - 1;
+    // Find contiguous mutual ranges
+    let rangeStart = null;
+    for (let i = 0; i <= hours.length; i++) {
+      const mutual = i < hours.length && hours[i] === allMask;
+      if (mutual && rangeStart === null) rangeStart = i;
+      if (!mutual && rangeStart !== null) {
+        // draw block
+        const topRow = rangeStart;
+        const height = i - rangeStart;
+        const cellIndex = topRow * 7 + d;
+        const cells = body.querySelectorAll('.cal-cell');
+        const anchor = cells[cellIndex];
+        if (anchor) {
+          const block = document.createElement('div');
+          block.className = 'avail-block mutual';
+          block.style.top = '1px';
+          block.style.height = `${height * 48 - 2}px`;
+          const sh = rangeStart + HOURS_START;
+          const eh = i + HOURS_START;
+          block.innerHTML = `<span class="avail-label">All free · ${formatHour(sh)}–${formatHour(eh)}</span>`;
+          anchor.appendChild(block);
+        }
+        rangeStart = null;
+      }
+    }
+  }
+}
+
+function renderMutualSummary() {
+  const el = document.getElementById('mutualSummary');
+  if (state.members.length < 2) {
+    el.innerHTML = '<p class="no-mutual">Add more members to see overlaps</p>';
+    return;
+  }
+  const wk = getWeekKey(state.weekOffset);
+  const mutualSlots = [];
+
+  for (let d = 0; d < 7; d++) {
+    const hours = new Array(HOURS_END - HOURS_START).fill(0);
+    state.members.forEach((m, mi) => {
+      (m.availability[wk] || []).forEach(s => {
+        if (s.day !== d) return;
+        for (let h = s.start; h < s.end; h++) {
+          const idx = h - HOURS_START;
+          if (idx >= 0 && idx < hours.length) hours[idx] |= (1 << mi);
+        }
+      });
+    });
+    const allMask = (1 << state.members.length) - 1;
+    let rs = null;
+    for (let i = 0; i <= hours.length; i++) {
+      const mutual = i < hours.length && hours[i] === allMask;
+      if (mutual && rs === null) rs = i;
+      if (!mutual && rs !== null) {
+        mutualSlots.push({ day: d, start: rs + HOURS_START, end: i + HOURS_START });
+        rs = null;
+      }
+    }
+  }
+
+  if (mutualSlots.length === 0) {
+    el.innerHTML = '<p class="no-mutual">No mutual availability this week</p>';
+    return;
+  }
+
+  el.innerHTML = `<div class="mutual-summary">
+    <div class="mutual-summary-title">Everyone is free</div>
+    ${mutualSlots.map(s => `<div class="mutual-slot">${DAY_NAMES[s.day]} ${formatHour(s.start)}–${formatHour(s.end)}</div>`).join('')}
+  </div>`;
+}
+
+function highlightSelection() {
+  if (!state.selecting) return;
+  const { day, startHour, endHour } = state.selecting;
+  const minH = Math.min(startHour, endHour);
+  const maxH = Math.max(startHour, endHour);
+  document.querySelectorAll('.cal-cell').forEach(c => {
+    const cd = +c.dataset.day, ch = +c.dataset.hour;
+    c.classList.toggle('selecting', cd === day && ch >= minH && ch < maxH);
+  });
+}
+
+// ─── Interactions ─────────────────────────────────────────────
+document.addEventListener('mouseup', () => {
+  if (!state.selecting) return;
+  const { day, startHour, endHour } = state.selecting;
+  const minH = Math.min(startHour, endHour);
+  const maxH = Math.max(startHour, endHour);
+  state.selecting = null;
+  document.querySelectorAll('.cal-cell.selecting').forEach(c => c.classList.remove('selecting'));
+
+  if (maxH - minH < 1) return;
+  addSlot(day, minH, maxH);
+});
+
+function addSlot(day, start, end) {
+  const member = state.members.find(m => m.id === state.activeMemberId);
+  if (!member) return;
+  const wk = getWeekKey(state.weekOffset);
+  if (!member.availability[wk]) member.availability[wk] = [];
+
+  // Merge overlapping
+  const slots = member.availability[wk];
+  const overlapping = slots.filter(s => s.day === day && s.start < end && s.end > start);
+  let newStart = start, newEnd = end;
+  overlapping.forEach(s => {
+    newStart = Math.min(newStart, s.start);
+    newEnd = Math.max(newEnd, s.end);
+  });
+  member.availability[wk] = slots.filter(s => !overlapping.includes(s));
+  member.availability[wk].push({ day, start: newStart, end: newEnd });
+  saveState();
+  showToast(`Added ${formatHour(newStart)}–${formatHour(newEnd)} for ${member.name}`);
+  render();
+}
+
+// Add member
+document.getElementById('addMemberBtn').addEventListener('click', addNewMember);
+document.getElementById('newMemberInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addNewMember();
+});
+function addNewMember() {
+  const inp = document.getElementById('newMemberInput');
+  const name = inp.value.trim();
+  if (!name) return;
+  if (state.members.length >= MEMBER_COLORS.length) {
+    showToast('Maximum members reached');
+    return;
+  }
+  const usedIdxs = state.members.map(m => m.colorIdx);
+  let colorIdx = 0;
+  for (let i = 0; i < MEMBER_COLORS.length; i++) {
+    if (!usedIdxs.includes(i)) { colorIdx = i; break; }
+  }
+  state.members.push({ id: state.nextId++, name, colorIdx, availability: {} });
+  inp.value = '';
+  saveState();
+  showToast(`${name} added`);
+  render();
+}
+
+function removeMember(id) {
+  state.members = state.members.filter(m => m.id !== id);
+  if (state.activeMemberId === id && state.members.length) {
+    state.activeMemberId = state.members[0].id;
+  }
+  saveState();
+  render();
+}
+
+// View toggle
+document.querySelectorAll('.view-toggle button').forEach(b => {
+  b.addEventListener('click', () => {
+    state.currentView = b.dataset.view;
+    render();
+  });
+});
+
+// ─── Delete Popover ───────────────────────────────────────────
+let activePopover = null;
+function closePopover() {
+  if (activePopover) { activePopover.remove(); activePopover = null; }
+  document.removeEventListener('mousedown', onDocClickPopover, true);
+}
+function onDocClickPopover(e) {
+  if (activePopover && !activePopover.contains(e.target)) closePopover();
+}
+function openDeletePopover(blockEl, member, wk, slotIdx) {
+  closePopover();
+  const slots = member.availability[wk];
+  const slot = slots[slotIdx];
+  if (!slot) return;
+
+  const pop = document.createElement('div');
+  pop.className = 'popover';
+  pop.innerHTML = `
+    <div class="popover-info">${esc(member.name)} · ${formatHour(slot.start)}–${formatHour(slot.end)}</div>
+    <button class="popover-btn delete">Delete this entry</button>
+    <button class="popover-btn cancel">Cancel</button>
+  `;
+  pop.querySelector('.delete').addEventListener('click', (e) => {
+    e.stopPropagation();
+    slots.splice(slotIdx, 1);
+    saveState();
+    closePopover();
+    showToast('Entry deleted');
+    render();
+  });
+  pop.querySelector('.cancel').addEventListener('click', (e) => {
+    e.stopPropagation();
+    closePopover();
+  });
+
+  blockEl.style.overflow = 'visible';
+  blockEl.appendChild(pop);
+  pop.style.top = '0';
+  pop.style.left = '100%';
+  pop.style.marginLeft = '4px';
+  activePopover = pop;
+
+  setTimeout(() => document.addEventListener('mousedown', onDocClickPopover, true), 0);
+}
+
+// Clear active member's week
+document.getElementById('clearWeekBtn').addEventListener('click', () => {
+  const member = state.members.find(m => m.id === state.activeMemberId);
+  if (!member) return;
+  const wk = getWeekKey(state.weekOffset);
+  if (!member.availability[wk] || member.availability[wk].length === 0) {
+    showToast('Nothing to clear');
+    return;
+  }
+  member.availability[wk] = [];
+  saveState();
+  showToast(`Cleared ${member.name}'s week`);
+  render();
+});
+
+// Week nav
+document.getElementById('prevWeek').addEventListener('click', () => { state.weekOffset--; render(); });
+document.getElementById('nextWeek').addEventListener('click', () => { state.weekOffset++; render(); });
+document.getElementById('todayBtn').addEventListener('click', () => { state.weekOffset = 0; render(); });
+
+// Toast
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timeout);
+  t._timeout = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ─── Init ─────────────────────────────────────────────────────
+if (!loadState()) {
+  seedDemoData();
+  saveState();
+}
+render();
+
+// Scroll to 8am on load
+setTimeout(() => {
+  const body = document.getElementById('calendarBody');
+  body.scrollTop = 48; // 1 row down from 7am
+}, 50);
+</script>
+
+</body>
+</html>
