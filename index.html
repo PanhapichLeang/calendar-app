@@ -598,7 +598,7 @@
     </div>
     <div class="header-actions">
       <div class="view-toggle">
-        <button class="active" data-view="individual">My Schedule</button>
+        <button class="active" data-view="individual">My Blocked Time</button>
         <button data-view="overlay">Everyone</button>
       </div>
     </div>
@@ -624,7 +624,7 @@
       <div class="panel" id="mutualPanel">
         <div class="panel-title">Mutual Availability</div>
         <div id="mutualSummary">
-          <p class="no-mutual">Add availability to see overlaps</p>
+          <p class="no-mutual">Add blocked times to see free slots</p>
         </div>
       </div>
     </aside>
@@ -692,6 +692,31 @@ let state = {
   nextId: 4,
   selecting: null,
 };
+
+// ─── Local Preferences (per browser) ──────────────────────────
+const LOCAL_PREFS_KEY = 'gather_local_prefs';
+
+function saveLocalPrefs() {
+  try {
+    localStorage.setItem(LOCAL_PREFS_KEY, JSON.stringify({
+      activeMemberId: state.activeMemberId,
+      currentView: state.currentView,
+      weekOffset: state.weekOffset,
+    }));
+  } catch(e) {}
+}
+
+function loadLocalPrefs() {
+  try {
+    const raw = localStorage.getItem(LOCAL_PREFS_KEY);
+    if (raw) {
+      const prefs = JSON.parse(raw);
+      if (prefs.activeMemberId != null) state.activeMemberId = prefs.activeMemberId;
+      if (prefs.currentView) state.currentView = prefs.currentView;
+      if (prefs.weekOffset != null) state.weekOffset = prefs.weekOffset;
+    }
+  } catch(e) {}
+}
 
 // ─── Firebase ─────────────────────────────────────────────────
 const firebaseConfig = {
@@ -806,7 +831,7 @@ function formatDateRange(offset) {
 }
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const HOURS_START = 7;
-const HOURS_END = 20;
+const HOURS_END = 22;
 
 function isToday(dayIdx, offset) {
   const ws = getWeekStart(offset);
@@ -862,6 +887,7 @@ function renderMembers() {
       if (e.target.classList.contains('member-remove')) return;
       state.activeMemberId = m.id;
       state.currentView = 'individual';
+      saveLocalPrefs();
       render();
     });
     const rmBtn = div.querySelector('.member-remove');
@@ -883,7 +909,7 @@ function renderLegend() {
   // mutual
   const md = document.createElement('div');
   md.className = 'legend-item';
-  md.innerHTML = `<span class="legend-swatch" style="background:var(--mutual-bg);border:1px solid var(--mutual-border)"></span>Everyone free`;
+  md.innerHTML = `<span class="legend-swatch" style="background:var(--mutual-bg);border:1px solid var(--mutual-border)"></span>All free`;
   el.appendChild(md);
 }
 
@@ -967,7 +993,7 @@ function drawMemberAvail(member, body, showRemove) {
     block.style.color = col.text;
     block.style.top = '1px';
     block.style.height = `${height * 48 - 2}px`;
-    block.innerHTML = `<span class="avail-label">${esc(member.name)} · ${formatHour(slot.start)}–${formatHour(slot.end)}</span>`;
+    block.innerHTML = `<span class="avail-label">${esc(member.name)} · Busy ${formatHour(slot.start)}–${formatHour(slot.end)}</span>`;
     block.style.pointerEvents = 'auto';
     block.style.cursor = 'pointer';
     block.addEventListener('mousedown', (e) => {
@@ -989,24 +1015,23 @@ function drawMutualBlocks(body) {
   const wk = getWeekKey(state.weekOffset);
 
   for (let d = 0; d < 7; d++) {
-    // Build per-hour bitmask: which members are free
-    const hours = new Array(HOURS_END - HOURS_START).fill(0);
-    state.members.forEach((m, mi) => {
+    // Build per-hour bitmask: which members are BUSY
+    const hours = new Array(HOURS_END - HOURS_START).fill(false);
+    state.members.forEach(m => {
       const slots = m.availability[wk] || [];
       slots.forEach(s => {
         if (s.day !== d) return;
         for (let h = s.start; h < s.end; h++) {
           const idx = h - HOURS_START;
-          if (idx >= 0 && idx < hours.length) hours[idx] |= (1 << mi);
+          if (idx >= 0 && idx < hours.length) hours[idx] = true;
         }
       });
     });
 
-    const allMask = (1 << state.members.length) - 1;
-    // Find contiguous mutual ranges
+    // Find contiguous ranges where NOBODY is busy
     let rangeStart = null;
     for (let i = 0; i <= hours.length; i++) {
-      const mutual = i < hours.length && hours[i] === allMask;
+      const mutual = i < hours.length && !hours[i];
       if (mutual && rangeStart === null) rangeStart = i;
       if (!mutual && rangeStart !== null) {
         // draw block
@@ -1041,20 +1066,19 @@ function renderMutualSummary() {
   const mutualSlots = [];
 
   for (let d = 0; d < 7; d++) {
-    const hours = new Array(HOURS_END - HOURS_START).fill(0);
-    state.members.forEach((m, mi) => {
+    const hours = new Array(HOURS_END - HOURS_START).fill(false);
+    state.members.forEach(m => {
       (m.availability[wk] || []).forEach(s => {
         if (s.day !== d) return;
         for (let h = s.start; h < s.end; h++) {
           const idx = h - HOURS_START;
-          if (idx >= 0 && idx < hours.length) hours[idx] |= (1 << mi);
+          if (idx >= 0 && idx < hours.length) hours[idx] = true;
         }
       });
     });
-    const allMask = (1 << state.members.length) - 1;
     let rs = null;
     for (let i = 0; i <= hours.length; i++) {
-      const mutual = i < hours.length && hours[i] === allMask;
+      const mutual = i < hours.length && !hours[i];
       if (mutual && rs === null) rs = i;
       if (!mutual && rs !== null) {
         mutualSlots.push({ day: d, start: rs + HOURS_START, end: i + HOURS_START });
@@ -1115,7 +1139,7 @@ function addSlot(day, start, end) {
   member.availability[wk] = slots.filter(s => !overlapping.includes(s));
   member.availability[wk].push({ day, start: newStart, end: newEnd });
   saveState();
-  showToast(`Added ${formatHour(newStart)}–${formatHour(newEnd)} for ${member.name}`);
+  showToast(`Blocked ${formatHour(newStart)}–${formatHour(newEnd)} for ${member.name}`);
   render();
 }
 
@@ -1128,13 +1152,9 @@ function addNewMember() {
   const inp = document.getElementById('newMemberInput');
   const name = inp.value.trim();
   if (!name) return;
-  if (state.members.length >= MEMBER_COLORS.length) {
-    showToast('Maximum members reached');
-    return;
-  }
   const usedIdxs = state.members.map(m => m.colorIdx);
   let colorIdx = 0;
-  for (let i = 0; i < MEMBER_COLORS.length; i++) {
+  for (let i = 0; i < 1000; i++) {
     if (!usedIdxs.includes(i)) { colorIdx = i; break; }
   }
   state.members.push({ id: state.nextId++, name, colorIdx, availability: {} });
@@ -1157,6 +1177,7 @@ function removeMember(id) {
 document.querySelectorAll('.view-toggle button').forEach(b => {
   b.addEventListener('click', () => {
     state.currentView = b.dataset.view;
+    saveLocalPrefs();
     render();
   });
 });
@@ -1222,9 +1243,9 @@ document.getElementById('clearWeekBtn').addEventListener('click', () => {
 });
 
 // Week nav
-document.getElementById('prevWeek').addEventListener('click', () => { state.weekOffset--; render(); });
-document.getElementById('nextWeek').addEventListener('click', () => { state.weekOffset++; render(); });
-document.getElementById('todayBtn').addEventListener('click', () => { state.weekOffset = 0; render(); });
+document.getElementById('prevWeek').addEventListener('click', () => { state.weekOffset--; saveLocalPrefs(); render(); });
+document.getElementById('nextWeek').addEventListener('click', () => { state.weekOffset++; saveLocalPrefs(); render(); });
+document.getElementById('todayBtn').addEventListener('click', () => { state.weekOffset = 0; saveLocalPrefs(); render(); });
 
 // Toast
 function showToast(msg) {
@@ -1242,8 +1263,7 @@ function esc(s) {
 }
 
 // ─── Init ─────────────────────────────────────────────────────
-// Firebase listener handles loading and rendering.
-// Render an initial empty state while waiting for Firebase.
+loadLocalPrefs();
 render();
 
 // Scroll to 8am on load
